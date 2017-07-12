@@ -4,4 +4,15 @@
 {% endblock %}
 {% block content %}
     <h1>[BOARD]</h1>
+    <hr>
+    <a href="{{ url_for("new_thread") }}">create new thread</a>
+    <hr>
+
+    {% if threads | length %}
+        <ul>
+        {% for thread in threads %}
+            <li>{{ thread.title }} ({{ threads[thread] }} message{% if threads[thread] > 1 %}s{% endif %})</li>
+        {% endfor %}
+        </ul>
+    {% endif %}
 {% endblock %}

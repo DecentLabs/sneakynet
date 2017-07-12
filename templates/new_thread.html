@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}
+    Localnet:Board:New Thread
+{% endblock %}
+{% block content %}
+    <form method="post">
+        <input type="text" name="title" placeholder="thread title"><br>
+        {% for err in errors["title"] %}
+            <div style="color: red">{{ err }}</div>
+        {% endfor %}
+        <input type="submit">
+    </form>
+{% endblock %}

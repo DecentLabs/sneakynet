@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, url_for, redirect, flash
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, login_user, login_required, logout_user
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from passlib.hash import pbkdf2_sha512
 import datetime
 import re
@@ -80,7 +80,7 @@ def login():
         password = request.form["password"]
         fqn = User.get_fqn(username, NODE_NAME)
         user = User.query.filter_by(username=fqn).first()
-        if user is not None and pbkdf2_sha512.verify(password, user.hash):
+        if user is not None and pbkdf2_sha512.verify(password, user.hash) and user.active:
             login_user(user)
             flash("login successful")
             return redirect(url_for('home'))
@@ -138,6 +138,7 @@ def logout():
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+
 @login_manager.unauthorized_handler
 def unauthorized():
     flash("you need to be logged in to perform this action")
@@ -193,7 +194,28 @@ class Message(db.Model):
 
 @app.route("/board")
 def board_home():
-    return render_template("board_home.html")
+    threads = {thread:thread.messages.count() for thread in Thread.query.all()}
+    return render_template("board_home.html", threads=threads)
+
+
+@app.route("/board/thread/new", methods=["GET", "POST"])
+@login_required
+def new_thread():
+    errors = {"title": []}
+    if request.method == "POST":
+        title = request.form["title"]
+        if len(title) > 80 or len(title) < 5:
+            errors["title"].append("title must be more than 5 characters and less than 80 characters")
+        thread = Thread.query.filter_by(title=title).first()
+        if thread is not None:
+            errors["title"].append("a thread with the same title already exists")
+        if len(errors["title"]) == 0:
+            thread = Thread(title, current_user)
+            db.session.add(thread)
+            db.session.commit()
+            flash("thread created")
+            return redirect(url_for("board_home"))
+    return render_template("new_thread.html", errors=errors)
 
 if __name__ == '__main__':
     app.run(debug=True)
