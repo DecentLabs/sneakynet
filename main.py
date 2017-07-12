@@ -30,14 +30,14 @@ class User(db.Model):
     hash = db.Column(db.String(80), unique=True)
 
     home_node = db.Column(db.String(80), nullable=True)
-    external = db.Column(db.Boolean())
-    exists = db.Column(db.Boolean())
+    external = db.Column(db.Boolean(), default=False)
+    active = db.Column(db.Boolean(), default=True)
     last_synced = db.Column(db.DateTime(), nullable=True)
 
     threads = db.relationship('Thread', backref='author', lazy='dynamic')
     messages = db.relationship('Message', backref='author', lazy='dynamic')
 
-    def __init__(self, username, password, home_node=NODE_NAME, exists=True):
+    def __init__(self, username, password, home_node=NODE_NAME, active=True):
         self.username = self.get_fqn(username, home_node)
         self.hash = pbkdf2_sha512.hash(password)
 
@@ -47,7 +47,10 @@ class User(db.Model):
         else:
             self.external = True
             self.last_synced = datetime.datetime.now()
-        self.exists = exists
+        self.active = active
+
+    def get_username(self):
+        return self.username.split('@')[0]
 
     @staticmethod
     def get_fqn(username, node_name):
@@ -63,7 +66,7 @@ class User(db.Model):
         return False
 
     def is_active(self):
-        return self.exists
+        return self.active
 
     def get_id(self):
         return unicode(self.id)
