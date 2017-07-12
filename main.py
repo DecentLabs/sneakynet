@@ -34,7 +34,8 @@ class User(db.Model):
     exists = db.Column(db.Boolean())
     last_synced = db.Column(db.DateTime(), nullable=True)
 
-    threads = db.relationship('Thread', backref='person', lazy='dynamic')
+    threads = db.relationship('Thread', backref='author', lazy='dynamic')
+    messages = db.relationship('Message', backref='author', lazy='dynamic')
 
     def __init__(self, username, password, home_node=NODE_NAME, exists=True):
         self.username = self.get_fqn(username, home_node)
@@ -66,6 +67,7 @@ class User(db.Model):
 
     def get_id(self):
         return unicode(self.id)
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -140,18 +142,21 @@ def load_user(user_id):
 class Thread(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(80), unique=True)
-    creation_time = None
-    last_message_time = None
-    last_sync_time = None  # nullable
-    last_sync_sent_time = None  # nullable
-    author = None
+    creation_time = db.Column(db.DateTime())
+    last_message_time = db.Column(db.DateTime(), nullable=True)
+    last_sync_time = db.Column(db.DateTime(), nullable=True)  # nullable
+    last_sync_sent_time = db.Column(db.DateTime(), nullable=True)  # nullable
+
     sync_status = db.Column(db.String(20))
     children = None  # nullable
 
-    def __init__(self, title, author_id):
+    author = db.Column(db.Integer, db.ForeignKey('user.id'))
+    messages = db.relationship('Message', backref='thread', lazy='dynamic')
+
+    def __init__(self, title, author):
         now = datetime.datetime.now()
         self.title = title
-        self.author = db.Column(db.Integer, db.ForeignKey('user.id'))
+        self.author = author
         self.creation_time = now
         self.last_message_time = now
         self.last_sync_time = None
@@ -161,13 +166,14 @@ class Thread(db.Model):
 
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    author = None
-    content = None
-    parent = None  # nullable
-    children = None  # nullable
-    post_time = None
-    last_sync_time = None
-    last_sync_sent_time = None
+    author = db.Column(db.Integer, db.ForeignKey('user.id'))
+    content = db.Column(db.UnicodeText())
+    thread = db.Column(db.Integer, db.ForeignKey('message.id'))
+    parent = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)  # nullable
+    children = db.relationship('Message', backref='parent', lazy='dynamic')  # nullable
+    post_time = db.Column(db.DateTime())
+    last_sync_time = db.Column(db.DateTime(), nullable=True)
+    last_sync_sent_time = db.Column(db.DateTime(), nullable=True)
     sync_status = db.Column(db.String(20))
 
     def __init__(self, author, content, parent_id):
@@ -176,9 +182,6 @@ class Message(db.Model):
         self.parent = None
         self.post_time = datetime.datetime.now()
         self.sync_status = "posted"
-
-
-# #### SYNC #### #
 
 
 @app.route("/board")
