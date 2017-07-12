@@ -151,9 +151,8 @@ class Thread(db.Model):
     last_sync_sent_time = db.Column(db.DateTime(), nullable=True)  # nullable
 
     sync_status = db.Column(db.String(20))
-    children = None  # nullable
 
-    author = db.Column(db.Integer, db.ForeignKey('user.id'))
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     messages = db.relationship('Message', backref='thread', lazy='dynamic')
 
     def __init__(self, title, author):
@@ -169,20 +168,20 @@ class Thread(db.Model):
 
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    author = db.Column(db.Integer, db.ForeignKey('user.id'))
+    message_author = db.Column(db.Integer, db.ForeignKey('user.id'))
     content = db.Column(db.UnicodeText())
-    thread = db.Column(db.Integer, db.ForeignKey('message.id'))
-    parent = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)  # nullable
-    children = db.relationship('Message', backref='parent', lazy='dynamic')  # nullable
+    thread_id = db.Column(db.Integer, db.ForeignKey('thread.id'))
+    parent_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)  # nullable
+    children = db.relationship('Message', backref=db.backref('parent', remote_side=id), lazy='dynamic', )  # nullable
     post_time = db.Column(db.DateTime())
     last_sync_time = db.Column(db.DateTime(), nullable=True)
     last_sync_sent_time = db.Column(db.DateTime(), nullable=True)
     sync_status = db.Column(db.String(20))
 
-    def __init__(self, author, content, parent_id):
-        self.author = None
+    def __init__(self, author, content, parent_thread):
+        self.author = author
         self.content = content
-        self.parent = None
+        self.parent_thread = parent_thread
         self.post_time = datetime.datetime.now()
         self.sync_status = "posted"
 
