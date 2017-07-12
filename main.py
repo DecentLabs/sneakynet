@@ -138,6 +138,11 @@ def logout():
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+@login_manager.unauthorized_handler
+def unauthorized():
+    flash("you need to be logged in to perform this action")
+    return redirect(url_for("login"))
+
 
 # #### BOARD #### #
 
