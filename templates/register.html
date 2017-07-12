@@ -1,0 +1,19 @@
+<html>
+    <head>
+        <title>Localnet:Register</title>
+    </head>
+    <body>
+        <form method="post">
+            <input type="text" name="username" placeholder="username"><br>
+            {% for err in errors["username"] %}
+                <div style="color: red">{{ err }}</div>
+            {% endfor %}
+            <input type="password" name="password" placeholder="password"><br>
+            {% for err in errors["password"] %}
+                <div style="color: red">{{ err }}</div>
+            {% endfor %}
+            <input type="password" name="password_confirm" placeholder="password confirmation"><br>
+            <input type="submit">
+        </form>
+    </body>
+</html>
