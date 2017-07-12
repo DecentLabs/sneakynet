@@ -37,7 +37,7 @@ class User(db.Model):
     threads = db.relationship('Thread', backref='person', lazy='dynamic')
 
     def __init__(self, username, password, home_node=NODE_NAME, exists=True):
-        self.username = username
+        self.username = self.get_fqn(username, home_node)
         self.hash = pbkdf2_sha512.hash(password)
 
         self.home_node = home_node
@@ -47,6 +47,10 @@ class User(db.Model):
             self.external = True
             self.last_synced = datetime.datetime.now()
         self.exists = exists
+
+    @staticmethod
+    def get_fqn(username, node_name):
+        return "{}@{}".format(username, node_name)
 
     def __repr__(self):
         return '<User %r>' % self.username
@@ -69,7 +73,8 @@ def login():
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
-        user = User.query.filter_by(username=username).first()
+        fqn = User.get_fqn(username, NODE_NAME)
+        user = User.query.filter_by(username=fqn).first()
         if user is not None and pbkdf2_sha512.verify(password, user.hash):
             login_user(user)
             flash("login successful")
@@ -91,7 +96,8 @@ def register():
             errors["username"].append("username must be between 5 and 25 characters")
         if not re.match(r'[a-zA-Z0-9]*', username):
             errors["username"].append("username must use alphanumeric characters only")
-        user = User.query.filter_by(username=username).first()
+        fqn = User.get_fqn(username, NODE_NAME)
+        user = User.query.filter_by(username=fqn).first()
         if user is not None:
             print("got user: {}".format(user))
             errors["username"].append("username aready exists")
