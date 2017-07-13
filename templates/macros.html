@@ -1,0 +1,11 @@
+{% macro render_message(message) %}
+    <div class="message">
+        <div class="message-content">
+            {{ message.content }}
+        </div>
+        <div class="message-meta">
+            Posted by <span class="message-meta-author">{{ message.author_username }}</span>
+            on <span class="message-meta-post-date">{{ message.post_time }}</span>
+        </div>
+    </div>
+{% endmacro %}

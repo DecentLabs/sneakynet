@@ -159,7 +159,7 @@ class Thread(db.Model):
     sync_status = db.Column(db.String(20))
 
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    author_name = db.Column(db.String(80))
+    author_username = db.Column(db.String(80))
     messages = db.relationship('Message', backref='thread', lazy='dynamic', foreign_keys='Message.thread_id')
     children = db.relationship('Message', backref='parent_thread', lazy='dynamic', foreign_keys='Message.parent_thread_id')
 
@@ -167,6 +167,7 @@ class Thread(db.Model):
         now = datetime.datetime.now()
         self.title = title
         self.author = author
+        self.author_username = author.username
         self.creation_time = now
         self.last_message_time = now
         self.last_sync_time = None
@@ -176,7 +177,8 @@ class Thread(db.Model):
 
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    message_author = db.Column(db.Integer, db.ForeignKey('user.id'))
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    author_username = db.Column(db.String(80))
     content = db.Column(db.UnicodeText())
     thread_id = db.Column(db.Integer, db.ForeignKey('thread.id'))
     parent_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)
