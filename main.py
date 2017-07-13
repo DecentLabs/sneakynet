@@ -159,7 +159,9 @@ class Thread(db.Model):
     sync_status = db.Column(db.String(20))
 
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    messages = db.relationship('Message', backref='thread', lazy='dynamic')
+    author_name = db.Column(db.String(80))
+    messages = db.relationship('Message', backref='thread', lazy='dynamic', foreign_keys='Message.thread_id')
+    children = db.relationship('Message', backref='parent_thread', lazy='dynamic', foreign_keys='Message.parent_thread_id')
 
     def __init__(self, title, author):
         now = datetime.datetime.now()
@@ -177,17 +179,20 @@ class Message(db.Model):
     message_author = db.Column(db.Integer, db.ForeignKey('user.id'))
     content = db.Column(db.UnicodeText())
     thread_id = db.Column(db.Integer, db.ForeignKey('thread.id'))
-    parent_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)  # nullable
-    children = db.relationship('Message', backref=db.backref('parent', remote_side=id), lazy='dynamic', )  # nullable
+    parent_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)
+    parent_thread_id = db.Column(db.Integer, db.ForeignKey('thread.id'), nullable=True)
+    children = db.relationship('Message', backref=db.backref('parent', remote_side=id), lazy='dynamic',)
     post_time = db.Column(db.DateTime())
     last_sync_time = db.Column(db.DateTime(), nullable=True)
     last_sync_sent_time = db.Column(db.DateTime(), nullable=True)
     sync_status = db.Column(db.String(20))
 
-    def __init__(self, author, content, parent_thread):
+    def __init__(self, author, content, parent_thread, parent_message = None):
         self.author = author
+        self.author_username = author.username
         self.content = content
-        self.parent_thread = parent_thread
+        self.parent_thread_id = self.thread_id = parent_thread.id
+        self.parent_id = parent_message.id if parent_message is not None else None
         self.post_time = datetime.datetime.now()
         self.sync_status = "posted"
 
@@ -216,6 +221,32 @@ def new_thread():
             flash("thread created")
             return redirect(url_for("board_home"))
     return render_template("new_thread.html", errors=errors)
+
+
+@app.route("/board/thread/<int:thread_id>/new", methods=["GET", "POST"])
+@login_required
+def new_message(thread_id):
+    thread = Thread.query.get(thread_id)
+    reply = int(request.args.get("reply", 0))
+    if reply:
+        reply_to = Message.query.get(reply)
+        peers = reply_to.children.all()
+    else:
+        reply_to = False
+        peers = thread.children.all()
+    errors = {"content": []}
+    if request.method == "POST":
+        content = request.form["content"]
+        if len(content) == 0:
+            errors["content"].append("the message can't be empty")
+        if len(errors["content"]) == 0:
+            message = Message(current_user, content, thread)
+            db.session.add(message)
+            db.session.commit()
+            flash("message added")
+            return redirect(url_for("board_home"))
+    return render_template("new_message.html", thread=thread, reply_to=reply_to, peers=peers, errors=errors)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

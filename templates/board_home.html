@@ -11,7 +11,7 @@
     {% if threads | length %}
         <ul>
         {% for thread in threads %}
-            <li>{{ thread.title }} ({{ threads[thread] }} message{% if threads[thread] > 1 %}s{% endif %})</li>
+            <li><a href="{{ url_for("new_message", thread_id=thread.id) }}">{{ thread.title }}</a> ({{ threads[thread] }} message{% if threads[thread] > 1 %}s{% endif %})</li>
         {% endfor %}
         </ul>
     {% endif %}
