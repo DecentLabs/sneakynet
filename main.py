@@ -174,22 +174,27 @@ class Thread(db.Model):
         self.last_sync_sent_time = None
         self.sync_status = "posted"
 
-    def get_messages_tree(self):
-        return [self.recurse_children(msg, {}) for msg in self.children]
+    def get_messages_tree(self, order="post"):
+        return [self.recurse_children(msg, [], order=order) for msg in self.children]
 
-    def recurse_children(self, current_node=None, dest_dict=None):
-        print(dest_dict)
-        if dest_dict is None:
-            dest_dict = {}
+    def recurse_children(self, current_node=None, dest_list=None, order="post"):
+        if dest_list is None:
+            dest_list = []
         if current_node is None:
             current_node = self
         children = current_node.children.all()
-        if children:
-            dest_dict[current_node] = {}
-            for child in children:
-                dest_dict[child] = self.recurse_children(child, dest_dict[current_node])
-        return dest_dict
+        #if children:
+        child_tree = []
+        for child in children:
+            print(child.content)
+            child_tree.append( self.recurse_children(child, []))
+            print('child tree')
+            print(child_tree)
+        dest_list.append((current_node, child_tree))
+        from pprint import pprint
+        print(current_node, child_tree)
 
+        return (current_node, child_tree)
 
 
 class Message(db.Model):

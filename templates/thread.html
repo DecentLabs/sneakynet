@@ -9,8 +9,6 @@
         <div class="thread-header-author">{{ thread.author_username }}</div>
     </div>
     <hr>
-    {% for toplevel_message in messages %}
-        {{ macros.recurse_messages(toplevel_message) }}
-    {% endfor %}
+    {{ macros.recurse_messages(messages) }}
     <pre>{{ messages }}</pre>
 {% endblock %}

@@ -14,11 +14,11 @@
 {% endmacro %}
 
 {%- macro recurse_messages(message_list, depth=0) %}
-    {% for message in message_list %}
-        {{ render_message(message, depth) }}
+    {% for message_tuple in message_list %}
+        {{ render_message(message_tuple[0], depth) }}
             {% set next_depth = depth + 1 %}
-        {% if message_list[message] | length %}
-            {{recurse_messages(message_list[message], next_depth)}}
+        {% if message_tuple[1] | length %}
+            {{recurse_messages(message_tuple[1], next_depth)}}
         {% endif %}
     {% endfor %}
 {%- endmacro %}
