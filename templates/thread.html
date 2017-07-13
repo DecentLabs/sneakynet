@@ -7,7 +7,7 @@
     <div class="thread-header">
         <h2>{{ thread.title }}</h2>
         <div class="thread-header-author">{{ thread.author_username }}</div>
-        <a href={{ url_for("new_message", thread_id = thread.id)}}>New message</a>
+        <a href={{ url_for("new_message", thread_id = thread.id)}} class="btn btn-primary">New message</a>
     </div>
     <hr>
     {% for toplevel_message in messages %}
