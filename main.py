@@ -158,12 +158,16 @@ class Thread(db.Model):
 
     sync_status = db.Column(db.String(20))
 
+    source_node = db.Column(db.String(80), nullable=True)
+    external = db.Column(db.Boolean(), default=False)
+    source_id = db.Column(db.Integer, nullable=True)
+
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     author_username = db.Column(db.String(80))
     messages = db.relationship('Message', backref='thread', lazy='dynamic', foreign_keys='Message.thread_id')
     children = db.relationship('Message', backref='parent_thread', lazy='dynamic', foreign_keys='Message.parent_thread_id')
 
-    def __init__(self, title, author):
+    def __init__(self, title, author, source_node=NODE_NAME, source_id=None):
         now = datetime.datetime.now()
         self.title = title
         self.author = author
@@ -173,6 +177,11 @@ class Thread(db.Model):
         self.last_sync_time = None
         self.last_sync_sent_time = None
         self.sync_status = "posted"
+        self.source_node = source_node
+        self.external = False
+        if source_node != NODE_NAME:
+            self.external = True
+        self.source_id = source_id
 
     def get_messages_tree(self, order="post"):
         return [self.recurse_children(msg, [], order=order) for msg in self.children]
@@ -205,7 +214,11 @@ class Message(db.Model):
     last_sync_sent_time = db.Column(db.DateTime(), nullable=True)
     sync_status = db.Column(db.String(20))
 
-    def __init__(self, author, content, parent_thread, parent_message=None):
+    source_node = db.Column(db.String(80), nullable=True)
+    external = db.Column(db.Boolean(), default=False)
+    source_id = db.Column(db.Integer, nullable=True)
+
+    def __init__(self, author, content, parent_thread, parent_message=None, source_node=NODE_NAME, source_id=None):
         self.author = author
         self.author_username = author.username
         self.content = content
@@ -216,6 +229,12 @@ class Message(db.Model):
             self.parent_thread_id = self.thread_id = parent_thread.id
         self.post_time = datetime.datetime.now()
         self.sync_status = "posted"
+
+        self.source_node = source_node
+        self.external = False
+        if source_node != NODE_NAME:
+            self.external = True
+        self.source_id = source_id
 
 
 @app.route("/board")
