@@ -4,15 +4,20 @@
     Localnet:Board:Thread:New Message
 {% endblock %}
 {% block content %}
-    <form method="post">
-        <label for="content">Content</label>
-        <textarea name="content"></textarea><br>
-        {% for err in errors["content"] %}
-            <div style="color: red">{{ err }}</div>
-        {% endfor %}
-        <input type="submit">
+  <div class="panel panel-primary">
+    <div class="panel-heading">
+        <h2 class="panel-title">Compose new message</h2>
+    </div>
+    <div class="panel-body">
 
-        <hr>
+    <form method="post" class="form">
+        <div class="form-group">
+          <label for="content" class="control-label">Message</label>
+          <textarea name="content" class="form-control"></textarea><br>
+          {% for err in errors["content"] %}
+              <div style="color: red">{{ err }}</div>
+          {% endfor %}
+        </div>
 
         <h3>context</h3>
         <div>
@@ -38,4 +43,10 @@
         {% endif %}
 
     </form>
+    </div>
+    <div class="panel-footer text-right">
+      <input type="submit" class="btn btn-primary">
+    </div>
+  </div>
+
 {% endblock %}
