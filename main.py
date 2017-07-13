@@ -306,7 +306,7 @@ class Message(db.Model):
             "author": self.author_id,
             "author_username": self.author_username,
             "post_time": self.creation_time.isoformat(),
-            "thread_id": self.thread_id
+            "thread_id": self.thread_id,
             "parent_id": self.parent_id,
             "parent_thread_id": self.parent_thread_id
         }
