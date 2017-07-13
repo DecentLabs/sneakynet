@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}
+    Localnet:Board:Thread:New Message
+{% endblock %}
+{% block content %}
+    <form method="post">
+        <label for="content">Content</label>
+        <textarea name="content"></textarea><br>
+        {% for err in errors["content"] %}
+            <div style="color: red">{{ err }}</div>
+        {% endfor %}
+        <input type="submit">
+
+        <hr>
+
+        <h3>context</h3>
+        <div>
+            You're replying to the following
+            {% if reply_to %}
+                message in the thread "{{ thread.title }}"
+            {% else %}
+                thread
+            {% endif %} :
+        </div>
+
+        <div>"{% if reply_to %}{{ reply_to.content }}" - {{ reply_to.author.username }}{% else %}{{ thread.title }}{% endif %}"</div>
+
+        <hr>
+
+        {% if peers | length %}
+            <h3>other replies</h3>
+            {% for peer in peers %}
+                <div>
+                    "{{ peer.content }}" - {{ peer.author.name }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+    </form>
+{% endblock %}
