@@ -182,17 +182,11 @@ class Thread(db.Model):
             dest_list = []
         if current_node is None:
             current_node = self
-        children = current_node.children.all()
-        #if children:
+        children = current_node.children.order_by(Message.post_time)
         child_tree = []
         for child in children:
-            print(child.content)
             child_tree.append( self.recurse_children(child, []))
-            print('child tree')
-            print(child_tree)
         dest_list.append((current_node, child_tree))
-        from pprint import pprint
-        print(current_node, child_tree)
 
         return (current_node, child_tree)
 
