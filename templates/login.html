@@ -1,15 +1,44 @@
 <html>
     <head>
         <title>Localnet:Login</title>
+
+        {% include '_header.html' %}
+
     </head>
     <body>
-    {% if error %}
-    <div style="color: red">login error</div>
-    {% endif %}
-        <form method="post">
-            <input type="text" name="username" placeholder="username"><br>
-            <input type="password" name="password" placeholder="password"><br>
-            <input type="submit">
-        </form>
+
+        {% include '_nav.html' %}
+
+        <div class="container">
+          <div class="row">
+              <div class="col-md-6 col-md-offset-3">
+                <div class="panel panel-primary">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Login</h2>
+                    </div>
+                    <div class="panel-body">
+                      <form method="post" class="form-vertical">
+                          <div class="form-group">
+                            <input type="text" name="username" placeholder="username" class="form-control">
+                            {% if error %}
+                                <div style="color: red" class="help-block">{{ err }}</div>
+                            {% endif %}
+                          </div>
+
+                          <div class="form-group">
+                            <input type="password" name="password" placeholder="password" class="form-control" >
+                            {% if error %}
+                                <div style="color: red">{{ err }}</div>
+                            {% endif %}
+                          </div>
+                          <div class="form-group">
+                            <button type="submit" class="btn btn-primary btn-lg">Login</button>
+                          </div>
+                      </form>
+                    </div>
+                </div>
+              </div>
+          </div>
+        </div>
     </body>
 </html>

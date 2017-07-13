@@ -3,11 +3,22 @@
     Localnet:Board:New Thread
 {% endblock %}
 {% block content %}
-    <form method="post">
-        <input type="text" name="title" placeholder="thread title"><br>
-        {% for err in errors["title"] %}
-            <div style="color: red">{{ err }}</div>
-        {% endfor %}
-        <input type="submit">
-    </form>
+    <div class="panel panel-primary">
+      <div class="panel-heading">
+          <h2 class="panel-title">Create new thread</h2>
+      </div>
+      <div class="panel-body">
+        <form method="post" class="form">
+            <div class="form-group">
+              <input type="text" name="title" placeholder="thread title" class="form-control">
+              {% for err in errors["title"] %}
+                  <div style="color: red">{{ err }}</div>
+              {% endfor %}
+            </div>
+        </form>
+      </div>
+      <div class="panel-footer text-right">
+        <input type="submit" class="btn btn-primary">
+      </div>
+    </div>
 {% endblock %}

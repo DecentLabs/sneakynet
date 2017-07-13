@@ -1,19 +1,47 @@
 <html>
     <head>
         <title>Localnet:Register</title>
+
+        {% include '_header.html' %}
+
     </head>
     <body>
-        <form method="post">
-            <input type="text" name="username" placeholder="username"><br>
-            {% for err in errors["username"] %}
-                <div style="color: red">{{ err }}</div>
-            {% endfor %}
-            <input type="password" name="password" placeholder="password"><br>
-            {% for err in errors["password"] %}
-                <div style="color: red">{{ err }}</div>
-            {% endfor %}
-            <input type="password" name="password_confirm" placeholder="password confirmation"><br>
-            <input type="submit">
-        </form>
+
+        {% include '_nav.html' %}
+
+        <div class="container">
+          <div class="row">
+              <div class="col-md-6 col-md-offset-3">
+                <div class="panel panel-primary">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Register</h2>
+                    </div>
+                    <div class="panel-body">
+                      <form method="post" class="form-vertical">
+                          <div class="form-group">
+                            <input type="text" name="username" placeholder="username" class="form-control">
+                            {% for err in errors["username"] %}
+                                <div style="color: red" class="help-block">{{ err }}</div>
+                            {% endfor %}
+                          </div>
+
+                          <div class="form-group">
+                            <input type="password" name="password" placeholder="password" class="form-control" >
+                            {% for err in errors["password"] %}
+                                <div style="color: red">{{ err }}</div>
+                            {% endfor %}
+                          </div>
+                          <div class="form-group">
+                            <input type="password" name="password_confirm" placeholder="password confirmation" class="form-control" ><br>
+                          </div>
+                          <div class="form-group">
+                            <button type="submit" class="btn btn-primary btn-lg">Register</button>
+                          </div>
+                      </form>
+                    </div>
+                </div>
+              </div>
+          </div>
+        </div>
     </body>
 </html>

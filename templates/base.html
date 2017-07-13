@@ -3,27 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}{% endblock %}</title>
+
+    {% include '_header.html' %}
 </head>
+
 <body>
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            <div id="messages">
-            {% for message in messages %}
-              {{ message }}<br>
-            {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
-    <hr>
-    {% if current_user.is_authenticated %}
-        Logged in as {{ current_user.username }}! -
-        <a href="{{ url_for("logout") }}">logout</a>
-        <hr>
-    {% else %}
-        <a href="{{ url_for("register") }}">register</a>
-        <a href="{{ url_for("login") }}">login</a>
-        <hr>
-    {% endif %}
-    {% block content %}{% endblock %}
+
+    {% include '_nav.html' %}
+
+    <div class="container">
+
+      {% with messages = get_flashed_messages() %}
+          {% if messages %}
+              <div id="messages">
+              {% for message in messages %}
+                {{ message }}<br>
+              {% endfor %}
+              </div>
+          {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </div>
 </body>
 </html>
