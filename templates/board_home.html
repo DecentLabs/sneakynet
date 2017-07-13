@@ -5,7 +5,7 @@
 {% block content %}
     <h1>[BOARD]</h1>
     <hr>
-    <a href="{{ url_for("new_thread") }}">create new thread</a>
+    <a href="{{ url_for("new_thread") }}" class="btn btn-primary">Create new thread</a>
     <hr>
 
     {% if threads | length %}
