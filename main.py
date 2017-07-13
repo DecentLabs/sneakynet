@@ -5,6 +5,7 @@ from passlib.hash import pbkdf2_sha512
 import datetime
 import re
 import json
+from os import path, makedirs, linesep
 
 NODE_NAME = "node1"
 
@@ -305,7 +306,7 @@ class Message(db.Model):
             "content": self.content,
             "author": self.author_id,
             "author_username": self.author_username,
-            "post_time": self.creation_time.isoformat(),
+            "post_time": self.post_time.isoformat(),
             "thread_id": self.thread_id,
             "parent_id": self.parent_id,
             "parent_thread_id": self.parent_thread_id
@@ -392,6 +393,43 @@ def new_message(thread_id):
 
 
 # #### SYNC #### #
+
+
+def do_sync_out(sync_dir_root, sequence_id):
+    now = datetime.datetime.now()
+    output_dir = path.join(sync_dir_root, NODE_NAME, sequence_id)
+    if not path.isdir(output_dir):
+        print("making dir")
+        makedirs(output_dir)
+    output_file_users = path.join(output_dir, "users.jsonl")
+    output_file_threads = path.join(output_dir, "threads.jsonl")
+    output_file_messages = path.join(output_dir, "messages.jsonl")
+    # dump users
+    users = User.query.filter_by(external=False)
+    users_export = [user.sync_out() + linesep for user in users]
+    with open(output_file_users, "w") as f:
+        f.writelines(users_export)
+    # dumps threads
+    threads = Thread.query.filter_by(external=False).filter_by(sync_status="posted").order_by(Thread.creation_time)
+    threads_export = [thread.sync_out() + linesep for thread in threads]
+    with open(output_file_threads, "w") as f:
+        f.writelines(threads_export)
+    for thread in threads:
+        thread.sync_status = "syncing"
+        thread.last_sync_sent_time = now
+    # dump messages
+    messages = Message.query.filter_by(external=False).filter_by(sync_status="posted").order_by(Message.post_time)
+    messages_export = [message.sync_out() + linesep for message in messages]
+    print(messages_export)
+    with open(output_file_messages, "w") as f:
+        f.writelines(messages_export)
+    for message in messages:
+        message.sync_status = "syncing"
+        message.last_sync_sent_time = now
+
+
+# #### MAIN #### #
+
 
 if __name__ == '__main__':
     app.run(debug=True)

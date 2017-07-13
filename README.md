@@ -15,3 +15,11 @@ python main.py
 ```sh
 npm run db:init
 ```
+## Required improvements
+
+- Omni-directional sync
+- Known nodes directory
+- Message/thread hashes as IDs
+- Synchronization chain
+- Optimized sync/serialization format
+- Database queries are extremely inefficient
