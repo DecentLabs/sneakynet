@@ -174,6 +174,29 @@ class Thread(db.Model):
         self.last_sync_sent_time = None
         self.sync_status = "posted"
 
+    #def recurse_children(self, children):
+    #    for child in children:
+    #        grandchildren = child.children.all()
+    #        if len(grandchildren):
+    #            return self.recurse_children(grandchildren)
+
+    def get_messages_tree(self):
+        return [self.recurse_children(msg, {}) for msg in self.children]
+
+    def recurse_children(self, current_node=None, dest_dict=None):
+        print(dest_dict)
+        if dest_dict is None:
+            dest_dict = {}
+        if current_node is None:
+            current_node = self
+        children = current_node.children.all()
+        if children:
+            dest_dict[current_node] = {}
+            for child in children:
+                dest_dict[child] = self.recurse_children(child, dest_dict[current_node])
+        return dest_dict
+
+
 
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -189,12 +212,15 @@ class Message(db.Model):
     last_sync_sent_time = db.Column(db.DateTime(), nullable=True)
     sync_status = db.Column(db.String(20))
 
-    def __init__(self, author, content, parent_thread, parent_message = None):
+    def __init__(self, author, content, parent_thread, parent_message=None):
         self.author = author
         self.author_username = author.username
         self.content = content
-        self.parent_thread_id = self.thread_id = parent_thread.id
         self.parent_id = parent_message.id if parent_message is not None else None
+        if parent_message:
+            self.thread_id = parent_thread.id
+        else:
+            self.parent_thread_id = self.thread_id = parent_thread.id
         self.post_time = datetime.datetime.now()
         self.sync_status = "posted"
 
@@ -225,6 +251,14 @@ def new_thread():
     return render_template("new_thread.html", errors=errors)
 
 
+@app.route("/board/thread/<int:thread_id>")
+def display_thread(thread_id):
+    thread = Thread.query.get(thread_id)
+    messages = thread.get_messages_tree()
+    print(messages)
+    return render_template("thread.html", thread=thread, messages=messages)
+
+
 @app.route("/board/thread/<int:thread_id>/new", methods=["GET", "POST"])
 @login_required
 def new_message(thread_id):
@@ -242,11 +276,14 @@ def new_message(thread_id):
         if len(content) == 0:
             errors["content"].append("the message can't be empty")
         if len(errors["content"]) == 0:
-            message = Message(current_user, content, thread)
+            if reply_to:
+                message = Message(current_user, content, thread, reply_to)
+            else:
+                message = Message(current_user, content, thread)
             db.session.add(message)
             db.session.commit()
             flash("message added")
-            return redirect(url_for("board_home"))
+            return redirect(url_for("display_thread", thread_id=thread.id))
     return render_template("new_message.html", thread=thread, reply_to=reply_to, peers=peers, errors=errors)
 
 
