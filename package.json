@@ -1,0 +1,22 @@
+{
+  "name": "sneakynet",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DecentLabs/sneakynet.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DecentLabs/sneakynet/issues"
+  },
+  "homepage": "https://github.com/DecentLabs/sneakynet#readme",
+  "devDependencies": {
+    "bootstrap-material-design": "^0.5.10"
+  }
+}
