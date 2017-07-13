@@ -31,6 +31,7 @@ class User(db.Model):
 
     home_node = db.Column(db.String(80), nullable=True)
     external = db.Column(db.Boolean(), default=False)
+    admin = db.Column(db.Boolean(), default=False)
     active = db.Column(db.Boolean(), default=True)
     last_synced = db.Column(db.DateTime(), nullable=True)
 
@@ -70,6 +71,9 @@ class User(db.Model):
 
     def get_id(self):
         return unicode(self.id)
+
+    def is_admin(self):
+        return self.admin
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -298,6 +302,8 @@ def new_message(thread_id):
             return redirect(url_for("display_thread", thread_id=thread.id))
     return render_template("new_message.html", thread=thread, reply_to=reply_to, peers=peers, errors=errors)
 
+
+# #### SYNC #### #
 
 if __name__ == '__main__':
     app.run(debug=True)
