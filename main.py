@@ -174,12 +174,6 @@ class Thread(db.Model):
         self.last_sync_sent_time = None
         self.sync_status = "posted"
 
-    #def recurse_children(self, children):
-    #    for child in children:
-    #        grandchildren = child.children.all()
-    #        if len(grandchildren):
-    #            return self.recurse_children(grandchildren)
-
     def get_messages_tree(self):
         return [self.recurse_children(msg, {}) for msg in self.children]
 
