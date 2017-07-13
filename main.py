@@ -4,6 +4,7 @@ from flask_login import LoginManager, login_user, login_required, logout_user, c
 from passlib.hash import pbkdf2_sha512
 import datetime
 import re
+import json
 
 NODE_NAME = "node1"
 
@@ -27,10 +28,11 @@ def home():
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True)
-    hash = db.Column(db.String(80), unique=True)
+    hash = db.Column(db.String(80))
 
     home_node = db.Column(db.String(80), nullable=True)
     external = db.Column(db.Boolean(), default=False)
+    source_id = db.Column(db.Integer, nullable=True)
     admin = db.Column(db.Boolean(), default=False)
     active = db.Column(db.Boolean(), default=True)
     last_synced = db.Column(db.DateTime(), nullable=True)
@@ -38,9 +40,13 @@ class User(db.Model):
     threads = db.relationship('Thread', backref='author', lazy='dynamic')
     messages = db.relationship('Message', backref='author', lazy='dynamic')
 
-    def __init__(self, username, password, home_node=NODE_NAME, active=True):
+    def __init__(self, username, password, home_node=NODE_NAME, active=True, source_id=None, admin=False):
         self.username = self.get_fqn(username, home_node)
-        self.hash = pbkdf2_sha512.hash(password)
+        if password is not None:
+            self.hash = pbkdf2_sha512.hash(password)
+        else:  # external users shouldn't have a local password
+            self.hash = ""
+        self.admin = admin
 
         self.home_node = home_node
         if home_node == NODE_NAME:
@@ -49,9 +55,36 @@ class User(db.Model):
             self.external = True
             self.last_synced = datetime.datetime.now()
         self.active = active
+        self.source_id = None
 
     def get_username(self):
         return self.username.split('@')[0]
+
+    def sync_out(self):
+        """
+        Serializes the User for export
+        """
+        output_json = {
+            "id": self.id,
+            "username": self.username,
+            "active": self.active,
+            "admin": self.admin,
+        }
+        return json.dumps(output_json)
+
+    @classmethod
+    def sync_in(cls, home_node, input_json):
+        """
+        Constructs a User object from a json input string.
+        """
+        data = json.loads(input_json)
+        user = cls(data["username"],
+                   password=None,
+                   home_node=home_node,
+                   active=data["active"],
+                   source_id=data["id"],
+                   admin=data["admin"])
+        return user
 
     @staticmethod
     def get_fqn(username, node_name):
@@ -154,7 +187,7 @@ def unauthorized():
 
 class Thread(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(80), unique=True)
+    title = db.Column(db.String(110), unique=True)
     creation_time = db.Column(db.DateTime())
     last_message_time = db.Column(db.DateTime(), nullable=True)
     last_sync_time = db.Column(db.DateTime(), nullable=True)  # nullable
@@ -203,6 +236,29 @@ class Thread(db.Model):
 
         return (current_node, child_tree)
 
+    def sync_out(self):
+        """
+        Serializes the Thread for export
+        """
+        output_json = {
+            "id": self.id,
+            "title": self.title,
+            "author": self.author_id,
+            "author_username": self.author_username,
+            "creation_time": self.creation_time.isoformat(),
+        }
+        return json.dumps(output_json)
+
+    @classmethod
+    def sync_in(cls, home_node, input_json):
+        """
+        Constructs a Thread object from a json input string.
+        """
+        data = json.loads(input_json)
+        thread = cls(data["title"], None, home_node, data["id"])
+        thread.creation_time = data["creation_time"]
+        return thread
+
 
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -239,6 +295,38 @@ class Message(db.Model):
         if source_node != NODE_NAME:
             self.external = True
         self.source_id = source_id
+
+    def sync_out(self):
+        """
+        Serializes the Message for export
+        """
+        output_json = {
+            "id": self.id,
+            "content": self.content,
+            "author": self.author_id,
+            "author_username": self.author_username,
+            "post_time": self.creation_time.isoformat(),
+            "thread_id": self.thread_id
+            "parent_id": self.parent_id,
+            "parent_thread_id": self.parent_thread_id
+        }
+        return json.dumps(output_json)
+
+    @classmethod
+    def sync_in(cls, home_node, input_json):
+        """
+        Constructs a Message object from a json input string.
+        """
+        data = json.loads(input_json)
+        message = cls(
+            None, # author
+            data["content"],
+            None, # parent_thread
+            parent_message=None,
+            source_node=home_node,
+            source_id=data["id"])
+        message.post_time = data["post_time"]
+        return message
 
 
 @app.route("/board")
