@@ -500,6 +500,17 @@ def do_sync_in(sync_dir_root, node_name, sequence_id):
                 if len(line):
                     message_data = json.loads(line)
                     Message.sync_update(node_name, message_data)
+
+
+@app.route("/sync")
+@login_required
+def sync_home():
+    if not current_user.is_admin:
+        flash("restricted to admin users")
+        return redirect(url_for("home"))
+    return render_template("sync_home.html")
+
+
 # #### MAIN #### #
 
 
