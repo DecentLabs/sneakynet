@@ -149,7 +149,6 @@ def login():
 def register():
     errors = {"username": [], "password": []}
     if request.method == "POST":
-        print("got post request")
         username = request.form["username"]
         password = request.form["password"]
         password_confirm = request.form["password_confirm"]
@@ -161,7 +160,6 @@ def register():
         fqn = User.get_fqn(username, NODE_NAME)
         user = User.query.filter_by(username=fqn).first()
         if user is not None:
-            print("got user: {}".format(user))
             errors["username"].append("username aready exists")
         # password validation
         if password != password_confirm:
@@ -169,12 +167,9 @@ def register():
         elif len(password) < 8:
             errors["password"].append("password must be at least 8 characters long")
         if sum(len(i) for i in errors.values()) != 0:
-            print("erroring out")
-            print("errors: {}".format(errors))
             return render_template("register.html", errors=errors)
         # user registration
         else:
-            print("creating user")
             user = User(username, password)
             db.session.add(user)
             db.session.commit()
@@ -291,7 +286,6 @@ class Thread(db.Model):
         author = User.query.get(thread_data["author"])
         thread = cls.query.get(thread_data["id"])
         if thread is None:
-            print("making new thread object")
             thread = cls.sync_in(home_node, thread_data, author, creation_time)
         thread.last_sync_time = now
         db.session.add(thread)
@@ -324,7 +318,10 @@ class Message(db.Model):
             self.thread_id = parent_thread.id
         else:
             self.parent_thread_id = self.thread_id = parent_thread.id
+
         self.post_time = datetime.datetime.now()
+        if post_time is not None:
+            self.post_time = post_time
         self.sync_status = "posted"
 
         self.source_node = source_node
@@ -373,8 +370,6 @@ class Message(db.Model):
         now = datetime.datetime.now()
         author = User.query.get(message_data["author"])
         parent_thread = Thread.query.get(message_data["thread_id"])
-        print('thread id is: {}'.format(message_data["thread_id"]))
-        print(parent_thread)
         parent_message = message_data["parent_id"]
         if parent_message is not None:
             parent_message = Message.query.get(message_data["parent_id"])
@@ -416,7 +411,6 @@ def new_thread():
 def display_thread(thread_id):
     thread = Thread.query.get(thread_id)
     messages = thread.get_messages_tree()
-    print(messages)
     return render_template("thread.html", thread=thread, messages=messages)
 
 
@@ -455,7 +449,6 @@ def do_sync_out(sync_dir_root, sequence_id):
     now = datetime.datetime.now()
     output_dir = path.join(sync_dir_root, NODE_NAME, sequence_id)
     if not path.isdir(output_dir):
-        print("making dir")
         makedirs(output_dir)
     output_file_users = path.join(output_dir, "users.jsonl")
     output_file_threads = path.join(output_dir, "threads.jsonl")
@@ -476,7 +469,6 @@ def do_sync_out(sync_dir_root, sequence_id):
     # dump messages
     messages = Message.query.filter_by(external=False).filter_by(sync_status="posted").order_by(Message.post_time)
     messages_export = [message.sync_out() + linesep for message in messages]
-    print(messages_export)
     with open(output_file_messages, "w") as f:
         f.writelines(messages_export)
     for message in messages:

@@ -21,6 +21,7 @@ npm run db:init
 - Known nodes directory
 - ~~User/Message/thread hashes as IDs~~
 - Synchronization chain
+- Sync data should be encrypted
 - Optimized sync/serialization format
 - Database queries are extremely inefficient
 - Thread titles should be UTF8
