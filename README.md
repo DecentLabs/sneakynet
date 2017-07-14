@@ -7,6 +7,7 @@
 git clone https://github.com/DecentLabs/sneakynet
 pip install -r requirements.txt
 npm install
+cp settings_template.py settings.py # edit accordingly
 python main.py
 ```
 
