@@ -1,3 +1,4 @@
 node_modules
-test.db
+services/test.db
 *.pyc
+/.python-version

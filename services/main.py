@@ -19,8 +19,6 @@ db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-class Object(object):
-    pass
 
 @app.route('/')
 def home():
@@ -231,9 +229,9 @@ class Thread(db.Model):
         self.external = False
         if source_node != NODE_NAME:
             self.external = True
+        self.creation_time = now
+        if creation_time is not None:
             self.creation_time = creation_time
-        else:
-            self.creation_time = now
 
         hash_base = "{}{}{}{}".format(
             self.title,
@@ -532,7 +530,7 @@ def sync_action(direction):
     if request.method == "POST" and direction == "in":
         nodepath = request.form["node"]
         print nodepath
-        for seqnum in sorted(int(num) for num in listdir(nodepath)):
+        for seqnum in sorted(int(num) for num in listdir(nodepath) if int(num)>0):
             do_sync_in(basedir, path.split(nodepath)[-1], str(seqnum))
             flash("sync successful from {}".format(nodepath))
             return redirect(url_for("sync_home"))

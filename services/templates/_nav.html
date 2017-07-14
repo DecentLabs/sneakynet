@@ -13,15 +13,21 @@
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
         {% if current_user.is_authenticated %}
           <ul class="nav navbar-nav navbar-right">
-            <li><a href="#">Logged in as {{ current_user.username }}!</a></li>
+            <li><a href="#">[Logged in as {{ current_user.username }}]</a></li>
             <li><a href="{{ url_for("logout") }}">logout</a></li>
           </ul>
         {% else %}
-          <ul class="nav navbar-nav">
+          <ul class="nav navbar-nav navbar-right">
             <li><a href="{{ url_for("register") }}">register</a></li>
             <li><a href="{{ url_for("login") }}">login</a></li>
           </ul>
         {% endif %}
+        <ul class="nav navbar-nav">
+            <li><a href="{{ url_for("board_home") }}">board</a></li>
+        {% if current_user.is_admin %}
+            <li><a href="{{ url_for("sync_home") }}">sync</a></li>
+        {% endif %}
+          </ul>
     </div>
   </div>
 </nav>
