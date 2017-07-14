@@ -20,7 +20,7 @@ npm run db:init
 - Omni-directional sync
 - Known nodes directory
 - ~~User/Message/thread hashes as IDs~~
-- Synchronization chain
+- Synchronization chain (we're dumping everything on every sync out)
 - Sync data should be encrypted
 - Optimized sync/serialization format
 - Database queries are extremely inefficient
