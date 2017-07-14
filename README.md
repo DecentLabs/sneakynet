@@ -19,7 +19,8 @@ npm run db:init
 
 - Omni-directional sync
 - Known nodes directory
-- Message/thread hashes as IDs
+- ~~User/Message/thread hashes as IDs~~
 - Synchronization chain
 - Optimized sync/serialization format
 - Database queries are extremely inefficient
+- Thread titles should be UTF8

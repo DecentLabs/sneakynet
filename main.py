@@ -2,10 +2,12 @@ from flask import Flask, render_template, request, url_for, redirect, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from passlib.hash import pbkdf2_sha512
+from hashlib import sha256
 import datetime
 import re
 import json
 from os import path, makedirs, linesep
+import dateutil.parser
 
 NODE_NAME = "node1"
 
@@ -27,13 +29,12 @@ def home():
 
 
 class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.String(64), primary_key=True)
     username = db.Column(db.String(80), unique=True)
     hash = db.Column(db.String(80))
 
     home_node = db.Column(db.String(80), nullable=True)
     external = db.Column(db.Boolean(), default=False)
-    source_id = db.Column(db.Integer, nullable=True)
     admin = db.Column(db.Boolean(), default=False)
     active = db.Column(db.Boolean(), default=True)
     last_synced = db.Column(db.DateTime(), nullable=True)
@@ -41,7 +42,7 @@ class User(db.Model):
     threads = db.relationship('Thread', backref='author', lazy='dynamic')
     messages = db.relationship('Message', backref='author', lazy='dynamic')
 
-    def __init__(self, username, password, home_node=NODE_NAME, active=True, source_id=None, admin=False):
+    def __init__(self, username, password, home_node=NODE_NAME, active=True, admin=False):
         self.username = self.get_fqn(username, home_node)
         if password is not None:
             self.hash = pbkdf2_sha512.hash(password)
@@ -56,7 +57,9 @@ class User(db.Model):
             self.external = True
             self.last_synced = datetime.datetime.now()
         self.active = active
-        self.source_id = None
+
+        hash_base = "{}{}".format(self.username, self.home_node)
+        self.id = sha256(hash_base).hexdigest()
 
     def get_username(self):
         return self.username.split('@')[0]
@@ -74,18 +77,32 @@ class User(db.Model):
         return json.dumps(output_json)
 
     @classmethod
-    def sync_in(cls, home_node, input_json):
+    def sync_in(cls, home_node, user_data):
         """
-        Constructs a User object from a json input string.
+        Constructs a User object from a dict.
         """
-        data = json.loads(input_json)
-        user = cls(data["username"],
+        user = cls(user_data["username"],
                    password=None,
                    home_node=home_node,
-                   active=data["active"],
-                   source_id=data["id"],
-                   admin=data["admin"])
+                   active=user_data["active"],
+                   admin=user_data["admin"])
         return user
+
+    @classmethod
+    def sync_update(cls, home_node, user_data):
+        """
+        Inserts or updates a user from a dict.
+        """
+        now = datetime.datetime.now()
+        user = cls.query.get(user_data["id"])
+        if user is not None:
+            user.active = user_data["active"]
+            user.admin = user_data["admin"]
+        else:
+            user = cls.sync_in(home_node, user_data)
+        user.last_synced = now
+        db.session.add(user)
+        db.session.commit()
 
     @staticmethod
     def get_fqn(username, node_name):
@@ -174,7 +191,7 @@ def logout():
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return User.query.get(user_id)
 
 
 @login_manager.unauthorized_handler
@@ -187,7 +204,7 @@ def unauthorized():
 
 
 class Thread(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.String(64), primary_key=True)
     title = db.Column(db.String(110), unique=True)
     creation_time = db.Column(db.DateTime())
     last_message_time = db.Column(db.DateTime(), nullable=True)
@@ -198,19 +215,17 @@ class Thread(db.Model):
 
     source_node = db.Column(db.String(80), nullable=True)
     external = db.Column(db.Boolean(), default=False)
-    source_id = db.Column(db.Integer, nullable=True)
 
-    author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    author_id = db.Column(db.String(64), db.ForeignKey('user.id'))
     author_username = db.Column(db.String(80))
     messages = db.relationship('Message', backref='thread', lazy='dynamic', foreign_keys='Message.thread_id')
     children = db.relationship('Message', backref='parent_thread', lazy='dynamic', foreign_keys='Message.parent_thread_id')
 
-    def __init__(self, title, author, source_node=NODE_NAME, source_id=None):
+    def __init__(self, title, author, source_node=NODE_NAME, creation_time=None):
         now = datetime.datetime.now()
-        self.title = title
+        self.title = title + " [@{}]".format(source_node)
         self.author = author
         self.author_username = author.username
-        self.creation_time = now
         self.last_message_time = now
         self.last_sync_time = None
         self.last_sync_sent_time = None
@@ -219,7 +234,16 @@ class Thread(db.Model):
         self.external = False
         if source_node != NODE_NAME:
             self.external = True
-        self.source_id = source_id
+            self.creation_time = creation_time
+        else:
+            self.creation_time = now
+
+        hash_base = "{}{}{}{}".format(
+            self.title,
+            self.author_username,
+            self.creation_time.isoformat(),
+            self.source_node)
+        self.id = sha256(hash_base).hexdigest()
 
     def get_messages_tree(self, order="post"):
         return [self.recurse_children(msg, [], order=order) for msg in self.children]
@@ -251,24 +275,37 @@ class Thread(db.Model):
         return json.dumps(output_json)
 
     @classmethod
-    def sync_in(cls, home_node, input_json):
+    def sync_in(cls, home_node, thread_data, author, creation_time):
         """
         Constructs a Thread object from a json input string.
         """
-        data = json.loads(input_json)
-        thread = cls(data["title"], None, home_node, data["id"])
-        thread.creation_time = data["creation_time"]
+        creation_time = dateutil.parser.parse(thread_data["creation_time"])
+        thread = cls(thread_data["title"], author, home_node, thread_data["id"], creation_time=creation_time)
         return thread
+
+    @classmethod
+    def sync_update(cls, home_node, thread_data, sync_mapping):
+        now = datetime.datetime.now()
+        creation_time = dateutil.parser.parse(thread_data["creation_time"])
+        author = object()
+        author.id = thread_data["author"]
+        author.username = thread_data["author_username"]
+        thread = cls.query.get(thread_data["id"])
+        if thread is None:
+            thread = cls.sync_in(home_node, thread_data, author, creation_time)
+        thread.last_sync_time = now
+        db.session.add(thread)
+        db.session.commit()
 
 
 class Message(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    id = db.Column(db.String(64), primary_key=True)
+    author_id = db.Column(db.String(64), db.ForeignKey('user.id'))
     author_username = db.Column(db.String(80))
     content = db.Column(db.UnicodeText())
-    thread_id = db.Column(db.Integer, db.ForeignKey('thread.id'))
-    parent_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)
-    parent_thread_id = db.Column(db.Integer, db.ForeignKey('thread.id'), nullable=True)
+    thread_id = db.Column(db.String(64), db.ForeignKey('thread.id'))
+    parent_id = db.Column(db.String(64), db.ForeignKey('message.id'), nullable=True)
+    parent_thread_id = db.Column(db.String(64), db.ForeignKey('thread.id'), nullable=True)
     children = db.relationship('Message', backref=db.backref('parent', remote_side=id), lazy='dynamic',)
     post_time = db.Column(db.DateTime())
     last_sync_time = db.Column(db.DateTime(), nullable=True)
@@ -277,9 +314,8 @@ class Message(db.Model):
 
     source_node = db.Column(db.String(80), nullable=True)
     external = db.Column(db.Boolean(), default=False)
-    source_id = db.Column(db.Integer, nullable=True)
 
-    def __init__(self, author, content, parent_thread, parent_message=None, source_node=NODE_NAME, source_id=None):
+    def __init__(self, author, content, parent_thread, parent_message=None, source_node=NODE_NAME, post_time=None):
         self.author = author
         self.author_username = author.username
         self.content = content
@@ -295,7 +331,9 @@ class Message(db.Model):
         self.external = False
         if source_node != NODE_NAME:
             self.external = True
-        self.source_id = source_id
+
+        id_base = "{}{}{}{}".format(self.author_username, self.content, self.source_node, self.post_time.isoformat())
+        self.id = sha256(id_base).hexdigest()
 
     def sync_out(self):
         """
@@ -303,6 +341,7 @@ class Message(db.Model):
         """
         output_json = {
             "id": self.id,
+            "source_node": self.source_node,
             "content": self.content,
             "author": self.author_id,
             "author_username": self.author_username,
@@ -314,20 +353,39 @@ class Message(db.Model):
         return json.dumps(output_json)
 
     @classmethod
-    def sync_in(cls, home_node, input_json):
+    def sync_in(cls, home_node, message_data, author, parent_thread, parent_message):
         """
         Constructs a Message object from a json input string.
         """
-        data = json.loads(input_json)
+        post_time = dateutil.parser.parse(message_data["post_time"])
         message = cls(
-            None, # author
-            data["content"],
-            None, # parent_thread
-            parent_message=None,
+            author,  # author
+            message_data["content"],
+            parent_thread,  # parent_thread
+            parent_message=parent_message,
             source_node=home_node,
-            source_id=data["id"])
-        message.post_time = data["post_time"]
+            post_time=post_time)
+        message.post_time = message_data["post_time"]
         return message
+
+    @classmethod
+    def sync_update(cls, home_node, message_data, sync_mapping):
+        now = datetime.datetime.now()
+        author = object()
+        author.id = message_data["author"]
+        author.username = message_data["author_username"]
+        parent_thread = object()
+        parent_thread.id = message_data["thread_id"]
+        parent_message = message_data["parent_id"]
+        if parent_message is not None:
+            parent_message = object()
+            parent_message.id = message_data["parent_id"]
+        message = cls.query.get(message_data["id"])
+        if message is None:
+            message = cls.sync_in(home_node, message_data, author, parent_thread, parent_message)
+        message.last_sync_time = now
+        db.session.add(message)
+        db.session.commit()
 
 
 @app.route("/board")
@@ -356,7 +414,7 @@ def new_thread():
     return render_template("new_thread.html", errors=errors)
 
 
-@app.route("/board/thread/<int:thread_id>")
+@app.route("/board/thread/<string:thread_id>")
 def display_thread(thread_id):
     thread = Thread.query.get(thread_id)
     messages = thread.get_messages_tree()
@@ -364,11 +422,11 @@ def display_thread(thread_id):
     return render_template("thread.html", thread=thread, messages=messages)
 
 
-@app.route("/board/thread/<int:thread_id>/new", methods=["GET", "POST"])
+@app.route("/board/thread/<string:thread_id>/new", methods=["GET", "POST"])
 @login_required
 def new_message(thread_id):
     thread = Thread.query.get(thread_id)
-    reply = int(request.args.get("reply", 0))
+    reply = request.args.get("reply", 0)
     if reply:
         reply_to = Message.query.get(reply)
         peers = reply_to.children.all()
@@ -427,6 +485,26 @@ def do_sync_out(sync_dir_root, sequence_id):
         message.sync_status = "syncing"
         message.last_sync_sent_time = now
 
+
+def do_sync_in(sync_dir_root, node_name, sequence_id):
+    sync_mapping = {"users": {}, "threads": {}, "messages": {}}
+    input_dir = path.join(sync_dir_root, node_name, sequence_id)
+    input_file_users = path.join(input_dir, "users.jsonl")
+    input_file_threads = path.join(input_dir, "threads.jsonl")
+    input_file_messages = path.join(input_dir, "messages.jsonl")
+    # load users
+    with open(input_file_users, "r") as f:
+        for line in f:
+            if len(line):
+                user_data = json.loads(line)
+                User.sync_update(node_name, user_data, sync_mapping)
+    # load threads
+    with open(input_file_threads, "r") as f:
+        for line in f:
+            if len(line):
+                thread_data = json.loads(line)
+                Thread.sync_update(node_name, thread_data, sync_mapping)
+    # load messages
 
 # #### MAIN #### #
 
