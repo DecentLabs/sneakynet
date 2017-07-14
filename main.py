@@ -44,7 +44,7 @@ class User(db.Model):
     threads = db.relationship('Thread', backref='author', lazy='dynamic')
     messages = db.relationship('Message', backref='author', lazy='dynamic')
 
-    def __init__(self, username, password, home_node=NODE_NAME, active=True, admin=False):
+    def __init__(self, username, password, home_node=NODE_NAME, active=True, admin=True):
         self.username = self.get_fqn(username, home_node)
         if password is not None:
             self.hash = pbkdf2_sha512.hash(password)
