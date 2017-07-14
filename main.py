@@ -19,6 +19,8 @@ db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
+class Object(object):
+    pass
 
 @app.route('/')
 def home():
@@ -70,7 +72,7 @@ class User(db.Model):
         """
         output_json = {
             "id": self.id,
-            "username": self.username,
+            "username": self.get_username(),
             "active": self.active,
             "admin": self.admin,
         }
@@ -79,7 +81,7 @@ class User(db.Model):
     @classmethod
     def sync_in(cls, home_node, user_data):
         """
-        Constructs a User object from a dict.
+        Constructs a User Object from a dict.
         """
         user = cls(user_data["username"],
                    password=None,
@@ -277,21 +279,19 @@ class Thread(db.Model):
     @classmethod
     def sync_in(cls, home_node, thread_data, author, creation_time):
         """
-        Constructs a Thread object from a json input string.
+        Constructs a Thread Object from a json input string.
         """
-        creation_time = dateutil.parser.parse(thread_data["creation_time"])
-        thread = cls(thread_data["title"], author, home_node, thread_data["id"], creation_time=creation_time)
+        thread = cls(thread_data["title"].split(' [@')[0], author, home_node, creation_time=creation_time)
         return thread
 
     @classmethod
-    def sync_update(cls, home_node, thread_data, sync_mapping):
+    def sync_update(cls, home_node, thread_data):
         now = datetime.datetime.now()
         creation_time = dateutil.parser.parse(thread_data["creation_time"])
-        author = object()
-        author.id = thread_data["author"]
-        author.username = thread_data["author_username"]
+        author = User.query.get(thread_data["author"])
         thread = cls.query.get(thread_data["id"])
         if thread is None:
+            print("making new thread object")
             thread = cls.sync_in(home_node, thread_data, author, creation_time)
         thread.last_sync_time = now
         db.session.add(thread)
@@ -355,7 +355,7 @@ class Message(db.Model):
     @classmethod
     def sync_in(cls, home_node, message_data, author, parent_thread, parent_message):
         """
-        Constructs a Message object from a json input string.
+        Constructs a Message Object from a json input string.
         """
         post_time = dateutil.parser.parse(message_data["post_time"])
         message = cls(
@@ -365,21 +365,19 @@ class Message(db.Model):
             parent_message=parent_message,
             source_node=home_node,
             post_time=post_time)
-        message.post_time = message_data["post_time"]
+        message.post_time = post_time
         return message
 
     @classmethod
-    def sync_update(cls, home_node, message_data, sync_mapping):
+    def sync_update(cls, home_node, message_data):
         now = datetime.datetime.now()
-        author = object()
-        author.id = message_data["author"]
-        author.username = message_data["author_username"]
-        parent_thread = object()
-        parent_thread.id = message_data["thread_id"]
+        author = User.query.get(message_data["author"])
+        parent_thread = Thread.query.get(message_data["thread_id"])
+        print('thread id is: {}'.format(message_data["thread_id"]))
+        print(parent_thread)
         parent_message = message_data["parent_id"]
         if parent_message is not None:
-            parent_message = object()
-            parent_message.id = message_data["parent_id"]
+            parent_message = Message.query.get(message_data["parent_id"])
         message = cls.query.get(message_data["id"])
         if message is None:
             message = cls.sync_in(home_node, message_data, author, parent_thread, parent_message)
@@ -497,15 +495,19 @@ def do_sync_in(sync_dir_root, node_name, sequence_id):
         for line in f:
             if len(line):
                 user_data = json.loads(line)
-                User.sync_update(node_name, user_data, sync_mapping)
+                User.sync_update(node_name, user_data)
     # load threads
     with open(input_file_threads, "r") as f:
         for line in f:
             if len(line):
                 thread_data = json.loads(line)
-                Thread.sync_update(node_name, thread_data, sync_mapping)
+                Thread.sync_update(node_name, thread_data)
     # load messages
-
+        with open(input_file_messages, "r") as f:
+            for line in f:
+                if len(line):
+                    message_data = json.loads(line)
+                    Message.sync_update(node_name, message_data)
 # #### MAIN #### #
 
 
