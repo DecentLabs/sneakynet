@@ -6,7 +6,7 @@ from hashlib import sha256
 import datetime
 import re
 import json
-from os import path, makedirs, linesep
+from os import path, makedirs, linesep, listdir
 import dateutil.parser
 
 NODE_NAME = "node1"
@@ -447,7 +447,7 @@ def new_message(thread_id):
 
 def do_sync_out(sync_dir_root, sequence_id):
     now = datetime.datetime.now()
-    output_dir = path.join(sync_dir_root, NODE_NAME, sequence_id)
+    output_dir = path.join(sync_dir_root, "nodes", NODE_NAME, sequence_id)
     if not path.isdir(output_dir):
         makedirs(output_dir)
     output_file_users = path.join(output_dir, "users.jsonl")
@@ -477,8 +477,7 @@ def do_sync_out(sync_dir_root, sequence_id):
 
 
 def do_sync_in(sync_dir_root, node_name, sequence_id):
-    sync_mapping = {"users": {}, "threads": {}, "messages": {}}
-    input_dir = path.join(sync_dir_root, node_name, sequence_id)
+    input_dir = path.join(sync_dir_root, "nodes", node_name, sequence_id)
     input_file_users = path.join(input_dir, "users.jsonl")
     input_file_threads = path.join(input_dir, "threads.jsonl")
     input_file_messages = path.join(input_dir, "messages.jsonl")
@@ -502,13 +501,55 @@ def do_sync_in(sync_dir_root, node_name, sequence_id):
                     Message.sync_update(node_name, message_data)
 
 
-@app.route("/sync")
+@app.route("/sync", methods=["GET", "POST"])
 @login_required
 def sync_home():
+    error = False
     if not current_user.is_admin:
         flash("restricted to admin users")
         return redirect(url_for("home"))
-    return render_template("sync_home.html")
+    if request.method == "POST":
+        basedir = request.form["basedir"]
+        sync_direction = request.form["syncdir"]
+        if not len(basedir):
+            error = "can't be empty"
+        elif not path.isdir(path.join(basedir, "nodes")):
+            error = "invalid directory"
+        elif sync_direction not in ("in", "out"):
+            error = "don't fuck with the form"
+        if not error:
+            return redirect(url_for("sync_action", direction=sync_direction, directory=basedir))
+    return render_template("sync_home.html", error=error)
+
+
+@app.route("/sync/<string:direction>", methods=["GET", "POST"])
+@login_required
+def sync_action(direction):
+    if not current_user.is_admin:
+        flash("restricted to admin users")
+        return redirect(url_for("home"))
+    basedir = request.args.get("directory", None)
+    if request.method == "POST" and direction == "in":
+        nodepath = request.form["node"]
+        print nodepath
+        for seqnum in sorted(int(num) for num in listdir(nodepath)):
+            do_sync_in(basedir, path.split(nodepath)[-1], str(seqnum))
+            flash("sync successful from {}".format(nodepath))
+            return redirect(url_for("sync_home"))
+    elif request.method == "GET":
+        nodedir = path.join(basedir, "nodes")
+        if direction == "in":
+            nodelist = [path.join(nodedir, node) for node in listdir(nodedir) if (not node.startswith(".")) and node!=NODE_NAME]
+            return render_template("sync_node_choice.html", nodelist=nodelist, basedir=basedir)
+        elif direction == "out":
+            syncdir = path.join(nodedir, NODE_NAME)
+            if not path.isdir(syncdir):
+                makedirs(path.join(syncdir, "0"))
+            seq_num = max(int(num) for num in listdir(syncdir)) + 1
+            do_sync_out(basedir, str(seq_num))
+            flash("outgoing sync successful")
+            return redirect(url_for("sync_home"))
+    pass
 
 
 # #### MAIN #### #

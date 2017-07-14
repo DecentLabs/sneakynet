@@ -12,21 +12,21 @@
                         <div class="form-group">
                             <input type="text" name="basedir" placeholder="synchronization base directory" class="form-control">
                             {% if error %}
-                                <div style="color: red" class="help-block">{{ err }}</div>
+                                <div style="color: red" class="help-block">{{ error }}</div>
                             {% endif %}
                         </div>
 
                         <div class="form-group">
-                            <div class="radio">
+                            <div>
                                 <label>
-                                    <input type="radio" name="sample1" value="option1" checked="">
-                                    Always
+                                    <input type="radio" name="syncdir" value="in" checked="">
+                                    in
                                 </label>
                             </div>
-                            <div class="radio">
+                            <div>
                                 <label>
-                                    <input type="radio" name="sample1" value="option1">
-                                    only when plugged in
+                                    <input type="radio" name="syncdir" value="out">
+                                    out
                                 </label>
                             </div>
                         </div>

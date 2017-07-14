@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Localnet:Sync:Home{% endblock %}
+{% block content %}
+    <div class="row">
+        <div class="col-md-6 col-md-offset-3">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Login</h2>
+                </div>
+                <div class="panel-body">
+                    <form method="post" action="{{ url_for("sync_action", direction="in", directory=basedir) }}" class="form-vertical">
+                        <div class="form-group">
+                            {% for node in nodelist %}
+                                <div>
+                                    <label>
+                                        <input type="radio" name="node" value="{{ node }}" checked="">
+                                        {{ node }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary btn-lg">start</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

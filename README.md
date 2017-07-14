@@ -25,3 +25,4 @@ npm run db:init
 - Optimized sync/serialization format
 - Database queries are extremely inefficient
 - Thread titles should be UTF8
+- Turn this horrible hack into clean code
