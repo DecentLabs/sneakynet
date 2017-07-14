@@ -2,3 +2,4 @@ node_modules
 services/test.db
 *.pyc
 /.python-version
+/services/settings.py

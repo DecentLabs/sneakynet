@@ -9,11 +9,13 @@ import json
 from os import path, makedirs, linesep, listdir
 import dateutil.parser
 
-NODE_NAME = "node1"
+import settings
+
+NODE_NAME = settings.NODE_NAME
 
 app = Flask(__name__)
-app.secret_key = 'H4ckW33k'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
+app.secret_key = settings.secret_key
+app.config['SQLALCHEMY_DATABASE_URI'] = settings.SQLALCHEMY_DATABASE_URI
 
 db = SQLAlchemy(app)
 login_manager = LoginManager()
@@ -554,4 +556,4 @@ def sync_action(direction):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=settings.debug, port=settings.port)
