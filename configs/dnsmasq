@@ -1,0 +1,5 @@
+interface={{interface}}
+listen-address={{address}}
+bind-interfaces
+dhcp-range={{dhcp_startrange}},{{dhcp_endrange}},{{dhcp_lease_duration}}
+address=/#/{{address}}

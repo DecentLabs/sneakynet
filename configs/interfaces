@@ -1,0 +1,6 @@
+allow-hotplug {{ interface }}
+iface {{ interface }} inet static
+    address {{ address }}
+    netmask {{ netmask }}
+    network {{ network }}
+    broadcast {{ broadcast }}

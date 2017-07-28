@@ -1,5 +1,0 @@
-NODE_NAME = "<node_name>"  # Shouldn't be more than 20 ascii chars
-secret_key = '<secret_key>'  # Arbitrary
-SQLALCHEMY_DATABASE_URI = '<db_uri>'
-port = <port>  # For the debug server. Int.
-debug = <debug>  # Bool.

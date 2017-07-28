@@ -3,3 +3,4 @@ services/test.db
 *.pyc
 /.python-version
 /services/settings.py
+/captive_portal/settings.py
